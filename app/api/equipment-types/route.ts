@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
-// Helper function to check if user is an approver
 async function isApprover() {
   const { getUser } = getKindeServerSession();
   const user = await getUser();
@@ -12,7 +11,13 @@ async function isApprover() {
 export async function GET() {
   try {
     const equipmentTypes = await prisma.equipment.findMany({
-      select: { id: true, name: true, totalQuantity: true, availableQuantity: true, imageUrl: true },
+      select: { 
+        id: true, 
+        name: true, 
+        totalQuantity: true, 
+        availableQuantity: true, 
+        imageUrl: true 
+      },
     });
     console.log("Fetched equipment types:", equipmentTypes);
     return NextResponse.json(equipmentTypes);
@@ -29,20 +34,50 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    console.log("Received POST data:", body); 
+    console.log("Received POST data:", body);
+    
+    if (!body.name || body.totalQuantity === undefined || body.availableQuantity === undefined) {
+      return NextResponse.json({ 
+        error: 'Missing required fields', 
+        details: 'name, totalQuantity, and availableQuantity are required'
+      }, { status: 400 });
+    }
+
+    const totalQuantity = parseInt(body.totalQuantity);
+    const availableQuantity = parseInt(body.availableQuantity);
+
+    if (isNaN(totalQuantity) || isNaN(availableQuantity)) {
+      return NextResponse.json({ 
+        error: 'Invalid quantity values', 
+        details: 'totalQuantity and availableQuantity must be valid numbers'
+      }, { status: 400 });
+    }
+
     const newEquipment = await prisma.equipment.create({
       data: {
         name: body.name.toUpperCase(),
-        totalQuantity: body.totalQuantity,
-        availableQuantity: body.availableQuantity,
-        imageUrl: body.imageUrl,
+        totalQuantity: totalQuantity,
+        availableQuantity: availableQuantity,
+        imageUrl: body.imageUrl || null,
       },
     });
-    console.log("Created equipment:", newEquipment); 
+    
+    console.log("Created equipment:", newEquipment);
     return NextResponse.json(newEquipment, { status: 201 });
   } catch (error) {
     console.error('Error creating equipment type:', error);
-    return NextResponse.json({ error: 'Failed to create equipment type' }, { status: 500 });
+    
+    if (error instanceof Error && error.message.includes('Unique constraint')) {
+      return NextResponse.json({ 
+        error: 'Equipment with this name already exists',
+        details: error.message 
+      }, { status: 409 });
+    }
+
+    return NextResponse.json({ 
+      error: 'Failed to create equipment type',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
@@ -59,13 +94,16 @@ export async function PUT(request: NextRequest) {
         name: body.name,
         totalQuantity: body.totalQuantity,
         availableQuantity: body.availableQuantity,
-        imageUrl: body.imageUrl, // Add this line
+        imageUrl: body.imageUrl,
       },
     });
     return NextResponse.json(updatedEquipment);
   } catch (error) {
     console.error('Error updating equipment type:', error);
-    return NextResponse.json({ error: 'Failed to update equipment type' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to update equipment type',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
