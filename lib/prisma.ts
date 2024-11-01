@@ -1,28 +1,43 @@
 import { PrismaClient } from '@prisma/client'
+import fs from 'fs'
 
-// Explicitly extend the NodeJS.Global interface
 declare global {
-  // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined
 }
 
-const prismaOptions = {
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
+const initializeDatabase = () => {
+  const tmpPath = '/tmp/dev.db'
+  const dbPath = process.cwd() + '/prisma/dev.db'
+  
+  if (!fs.existsSync(tmpPath) && fs.existsSync(dbPath)) {
+    try {
+      fs.copyFileSync(dbPath, tmpPath)
+    } catch (error) {
+      console.error('Error copying database:', error)
+    }
+  }
 }
 
-let prisma: PrismaClient
-
-if (process.env.NODE_ENV === 'production') {
-  prisma = new PrismaClient(prismaOptions)
-} else {
-  if (!globalThis.prisma) {
-    globalThis.prisma = new PrismaClient(prismaOptions)
+const prismaClientSingleton = () => {
+  if (process.env.NODE_ENV === 'production') {
+    initializeDatabase()
   }
-  prisma = globalThis.prisma
+  
+  return new PrismaClient({
+    datasources: {
+      db: {
+        url: process.env.NODE_ENV === 'production' 
+          ? 'file:/tmp/dev.db'
+          : 'file:./prisma/dev.db'
+      }
+    }
+  })
+}
+
+const prisma = globalThis.prisma ?? prismaClientSingleton()
+
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.prisma = prisma
 }
 
 export default prisma

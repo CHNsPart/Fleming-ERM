@@ -1,10 +1,39 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server"
+import fs from 'fs'
+
+async function initializeDatabase() {
+  const tmpPath = '/tmp/dev.db'
+  const dbPath = process.cwd() + '/prisma/dev.db'
+  
+  if (!fs.existsSync(tmpPath) && fs.existsSync(dbPath)) {
+    try {
+      fs.copyFileSync(dbPath, tmpPath)
+      console.log('Database initialized in /tmp')
+    } catch (error) {
+      console.error('Error initializing database:', error)
+      throw error
+    }
+  }
+}
 
 export async function middleware(request: NextRequest) {
   const { isAuthenticated, getUser } = getKindeServerSession();
   const user = await getUser();
+
+  // Initialize database for API routes in production
+  if (process.env.NODE_ENV === 'production' && request.nextUrl.pathname.startsWith('/api')) {
+    try {
+      await initializeDatabase()
+    } catch (error) {
+      console.error('Database initialization failed:', error)
+      return NextResponse.json(
+        { error: 'Internal server error: Database initialization failed' }, 
+        { status: 500 }
+      )
+    }
+  }
 
   // Check if the user is authenticated
   if (!(await isAuthenticated())) {
