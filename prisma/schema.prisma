@@ -1,0 +1,44 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  requests      Request[]
+}
+
+model Request {
+  id            String   @id @default(cuid())
+  user          User     @relation(fields: [userId], references: [id])
+  userId        String
+  equipment     Equipment @relation(fields: [equipmentId], references: [id])
+  equipmentId   String
+  equipmentType String
+  quantity      Int
+  returnedQuantity Int @default(0)
+  purpose       String
+  pickupDate    DateTime
+  returnDate    DateTime
+  status        String   @default("PENDING")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  campus String
+}
+
+model Equipment {
+  id                String    @id @default(cuid())
+  name              String    @unique
+  totalQuantity     Int
+  availableQuantity Int
+  imageUrl          String?
+  requests          Request[]
+}
