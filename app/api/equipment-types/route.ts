@@ -1,6 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import fs from 'fs';
+import path from 'path';
+
+async function ensureDatabaseExists() {
+  if (process.env.NODE_ENV === 'production') {
+    const dbPath = '/tmp/app.db';
+    const sourceDbPath = path.join(process.cwd(), 'prisma/app.db');
+
+    // Check if database exists in tmp
+    if (!fs.existsSync(dbPath) && fs.existsSync(sourceDbPath)) {
+      try {
+        // Copy database file to tmp directory
+        fs.copyFileSync(sourceDbPath, dbPath);
+        // Set proper permissions
+        fs.chmodSync(dbPath, 0o666);
+      } catch (error) {
+        console.error('Error setting up database:', error);
+        throw new Error('Database setup failed');
+      }
+    }
+  }
+}
 
 async function isApprover() {
   const { getUser } = getKindeServerSession();
@@ -10,6 +32,7 @@ async function isApprover() {
 
 export async function GET() {
   try {
+    await ensureDatabaseExists();
     const equipmentTypes = await prisma.equipment.findMany({
       select: { 
         id: true, 
@@ -19,7 +42,6 @@ export async function GET() {
         imageUrl: true 
       },
     });
-    console.log("Fetched equipment types:", equipmentTypes);
     return NextResponse.json(equipmentTypes);
   } catch (error) {
     console.error('Error fetching equipment types:', error);
@@ -33,8 +55,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await ensureDatabaseExists();
     const body = await request.json();
-    console.log("Received POST data:", body);
     
     if (!body.name || body.totalQuantity === undefined || body.availableQuantity === undefined) {
       return NextResponse.json({ 
@@ -62,7 +84,6 @@ export async function POST(request: NextRequest) {
       },
     });
     
-    console.log("Created equipment:", newEquipment);
     return NextResponse.json(newEquipment, { status: 201 });
   } catch (error) {
     console.error('Error creating equipment type:', error);
@@ -87,6 +108,7 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
+    await ensureDatabaseExists();
     const body = await request.json();
     const updatedEquipment = await prisma.equipment.update({
       where: { id: body.id },
@@ -113,6 +135,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
+    await ensureDatabaseExists();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {

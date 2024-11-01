@@ -1,12 +1,24 @@
 import { PrismaClient } from '@prisma/client'
+import { execSync } from 'child_process'
 
 const prismaClientSingleton = () => {
+  // If in production, try to set up the database
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      // Ensure the migrations are applied
+      execSync('prisma migrate deploy')
+    } catch (error) {
+      console.error('Migration error:', error)
+    }
+  }
+
   return new PrismaClient({
     datasources: {
       db: {
-        url: process.env.DATABASE_URL
+        url: "file:/tmp/app.db"
       }
-    }
+    },
+    log: ['query', 'error', 'warn']
   })
 }
 
