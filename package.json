@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prepare-db": "prisma migrate deploy && node -e \"require('fs').copyFileSync('prisma/dev.db', 'prisma/app.db')\"",
-    "build": "npm run prepare-db && prisma generate && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "postinstall": "prisma generate"
   },

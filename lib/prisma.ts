@@ -1,32 +1,14 @@
 import { PrismaClient } from '@prisma/client'
-import { execSync } from 'child_process'
 
 const prismaClientSingleton = () => {
-  // If in production, try to set up the database
-  if (process.env.NODE_ENV === 'production') {
-    try {
-      // Ensure the migrations are applied
-      execSync('prisma migrate deploy')
-    } catch (error) {
-      console.error('Migration error:', error)
-    }
-  }
-
-  return new PrismaClient({
-    datasources: {
-      db: {
-        url: "file:/tmp/app.db"
-      }
-    },
-    log: ['query', 'error', 'warn']
-  })
+  return new PrismaClient()
 }
 
-type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>
-
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClientSingleton | undefined
+type GlobalWithPrisma = typeof globalThis & {
+  prisma: ReturnType<typeof prismaClientSingleton> | undefined
 }
+
+const globalForPrisma = globalThis as GlobalWithPrisma
 
 const prisma = globalForPrisma.prisma ?? prismaClientSingleton()
 
