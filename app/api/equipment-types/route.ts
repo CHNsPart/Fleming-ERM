@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import fs from 'fs';
 import path from 'path';
+import { initDatabase } from '../_init';
 
 async function ensureDatabaseExists() {
   if (process.env.NODE_ENV === 'production') {
@@ -55,46 +56,23 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await ensureDatabaseExists();
-    const body = await request.json();
+    await initDatabase(); 
     
-    if (!body.name || body.totalQuantity === undefined || body.availableQuantity === undefined) {
-      return NextResponse.json({ 
-        error: 'Missing required fields', 
-        details: 'name, totalQuantity, and availableQuantity are required'
-      }, { status: 400 });
-    }
-
-    const totalQuantity = parseInt(body.totalQuantity);
-    const availableQuantity = parseInt(body.availableQuantity);
-
-    if (isNaN(totalQuantity) || isNaN(availableQuantity)) {
-      return NextResponse.json({ 
-        error: 'Invalid quantity values', 
-        details: 'totalQuantity and availableQuantity must be valid numbers'
-      }, { status: 400 });
-    }
-
+    const body = await request.json();
+    console.log('Received body:', body); // Add logging
+    
     const newEquipment = await prisma.equipment.create({
       data: {
         name: body.name.toUpperCase(),
-        totalQuantity: totalQuantity,
-        availableQuantity: availableQuantity,
+        totalQuantity: parseInt(body.totalQuantity),
+        availableQuantity: parseInt(body.availableQuantity),
         imageUrl: body.imageUrl || null,
       },
     });
     
     return NextResponse.json(newEquipment, { status: 201 });
   } catch (error) {
-    console.error('Error creating equipment type:', error);
-    
-    if (error instanceof Error && error.message.includes('Unique constraint')) {
-      return NextResponse.json({ 
-        error: 'Equipment with this name already exists',
-        details: error.message 
-      }, { status: 409 });
-    }
-
+    console.error('Detailed error:', error); // Add detailed error logging
     return NextResponse.json({ 
       error: 'Failed to create equipment type',
       details: error instanceof Error ? error.message : 'Unknown error'
