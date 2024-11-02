@@ -48,7 +48,7 @@ export async function GET() {
     return NextResponse.json(equipmentTypes);
   } catch (error) {
     console.error('Error fetching equipment types:', error);
-    return NextResponse.json({ error: 'Failed to fetch equipment types' }, { status: 500 });
+    return NextResponse.json([]);
   }
 }
 
