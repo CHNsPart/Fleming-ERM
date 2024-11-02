@@ -35,48 +35,50 @@ export async function GET() {
   try {
     await initDatabase();
     
-    const equipmentTypes = await prisma.equipment.findMany({
-      select: { 
-        id: true, 
-        name: true, 
-        totalQuantity: true, 
-        availableQuantity: true, 
-        imageUrl: true 
-      },
+    const equipmentTypes = await prisma.$transaction(async (prisma) => {
+      return prisma.equipment.findMany({
+        select: { 
+          id: true, 
+          name: true, 
+          totalQuantity: true, 
+          availableQuantity: true, 
+          imageUrl: true 
+        },
+        orderBy: {
+          name: 'asc'
+        }
+      });
     });
-    console.log('Fetched equipment types:', equipmentTypes);
+
     return NextResponse.json(equipmentTypes);
   } catch (error) {
     console.error('Error fetching equipment types:', error);
-    return NextResponse.json([]);
+    return NextResponse.json({ error: 'Internal Server Error', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
-  if (!await isApprover()) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-  }
-
   try {
-    await initDatabase(); 
+    await initDatabase();
     
     const body = await request.json();
-    console.log('Received body:', body); // Add logging
     
-    const newEquipment = await prisma.equipment.create({
-      data: {
-        name: body.name.toUpperCase(),
-        totalQuantity: parseInt(body.totalQuantity),
-        availableQuantity: parseInt(body.availableQuantity),
-        imageUrl: body.imageUrl || null,
-      },
+    const newEquipment = await prisma.$transaction(async (prisma) => {
+      return prisma.equipment.create({
+        data: {
+          name: body.name.toUpperCase(),
+          totalQuantity: parseInt(body.totalQuantity),
+          availableQuantity: parseInt(body.availableQuantity),
+          imageUrl: body.imageUrl || null,
+        },
+      });
     });
     
     return NextResponse.json(newEquipment, { status: 201 });
   } catch (error) {
-    console.error('Detailed error:', error); // Add detailed error logging
+    console.error('Error creating equipment:', error);
     return NextResponse.json({ 
-      error: 'Failed to create equipment type',
+      error: 'Failed to create equipment',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }

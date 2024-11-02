@@ -1,29 +1,33 @@
 import fs from 'fs';
 import path from 'path';
 
-export async function initDatabase() {
-  if (process.env.NODE_ENV === 'production') {
-    const targetDbPath = '/tmp/prod.db';
-    const sourceDbPath = path.join(process.cwd(), 'prisma/prod.db');
+const DB_PATH = '/tmp/dev.db';
 
+export async function initDatabase() {
+  try {
+    // Create /tmp if it doesn't exist
     if (!fs.existsSync('/tmp')) {
       fs.mkdirSync('/tmp');
     }
 
-    if (fs.existsSync(sourceDbPath) && !fs.existsSync(targetDbPath)) {
-      try {
-        fs.copyFileSync(sourceDbPath, targetDbPath);
-        fs.chmodSync(targetDbPath, 0o666);
-      } catch (error) {
-        console.error('Error initializing database:', error);
-        throw new Error('Failed to initialize database');
-      }
+    // Copy database if it doesn't exist in /tmp
+    const sourceDbPath = path.join(process.cwd(), 'prisma/dev.db');
+    if (fs.existsSync(sourceDbPath) && !fs.existsSync(DB_PATH)) {
+      fs.copyFileSync(sourceDbPath, DB_PATH);
+      fs.chmodSync(DB_PATH, 0o666);
     }
+
+    // If neither exists, create an empty file
+    if (!fs.existsSync(DB_PATH)) {
+      fs.writeFileSync(DB_PATH, '');
+      fs.chmodSync(DB_PATH, 0o666);
+    }
+  } catch (error) {
+    console.error('Database initialization error:', error);
+    throw new Error('Failed to initialize database');
   }
 }
 
 export function getDbPath() {
-  return process.env.NODE_ENV === 'production' 
-    ? '/tmp/prod.db'
-    : path.join(process.cwd(), 'prisma/dev.db');
+  return DB_PATH;
 }

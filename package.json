@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && prisma db push && cp prisma/dev.db prisma/prod.db && next build",
+    "dev": "prisma generate && prisma db push && next dev",
+    "build": "prisma generate && prisma db push && cp prisma/dev.db /tmp/dev.db && next build",
     "start": "next start",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate && prisma db push"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

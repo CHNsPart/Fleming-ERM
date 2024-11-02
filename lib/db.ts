@@ -4,37 +4,50 @@ import path from 'path'
 
 const globalForPrisma = globalThis as { prisma?: PrismaClient }
 
-const SQLITE_PATH = process.env.NODE_ENV === 'production' 
-  ? '/tmp/prod.db'
-  : path.join(process.cwd(), 'prisma/dev.db')
+// Always use /tmp/dev.db for consistency between development and production
+const DB_PATH = '/tmp/dev.db'
 
-if (process.env.NODE_ENV === 'production') {
-  // Ensure the /tmp directory exists
-  if (!fs.existsSync('/tmp')) {
-    fs.mkdirSync('/tmp')
-  }
-
-  // Copy the database file if it doesn't exist in /tmp
-  const sourceDbPath = path.join(process.cwd(), 'prisma/prod.db')
-  if (fs.existsSync(sourceDbPath) && !fs.existsSync(SQLITE_PATH)) {
-    try {
-      fs.copyFileSync(sourceDbPath, SQLITE_PATH)
-      fs.chmodSync(SQLITE_PATH, 0o666)
-    } catch (error) {
-      console.error('Error copying database:', error)
+// Ensure database exists and is accessible
+const ensureDatabase = () => {
+  try {
+    // Create /tmp if it doesn't exist
+    if (!fs.existsSync('/tmp')) {
+      fs.mkdirSync('/tmp')
     }
+
+    // Copy database from prisma directory if it doesn't exist in /tmp
+    const sourceDbPath = path.join(process.cwd(), 'prisma/dev.db')
+    if (fs.existsSync(sourceDbPath) && !fs.existsSync(DB_PATH)) {
+      fs.copyFileSync(sourceDbPath, DB_PATH)
+      fs.chmodSync(DB_PATH, 0o666)
+    }
+
+    // If neither exists, create an empty file
+    if (!fs.existsSync(DB_PATH)) {
+      fs.writeFileSync(DB_PATH, '')
+      fs.chmodSync(DB_PATH, 0o666)
+    }
+  } catch (error) {
+    console.error('Database initialization error:', error)
   }
 }
 
+ensureDatabase()
+
 const prismaClientSingleton = () => {
-  return new PrismaClient({
-    datasources: {
-      db: {
-        url: `file:${SQLITE_PATH}`
-      }
-    },
-    log: ['query', 'error', 'warn'],
-  })
+  try {
+    return new PrismaClient({
+      datasources: {
+        db: {
+          url: `file:${DB_PATH}`
+        }
+      },
+      log: ['error', 'warn', 'query'],
+    })
+  } catch (error) {
+    console.error('Error creating Prisma Client:', error)
+    throw error
+  }
 }
 
 const prisma = globalForPrisma.prisma ?? prismaClientSingleton()
