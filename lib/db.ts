@@ -7,9 +7,8 @@ const DB_PATH = process.env.NODE_ENV === 'production'
   ? '/tmp/prod.db'
   : path.join(process.cwd(), 'prisma/dev.db');
 
-declare global {
-  var prisma: PrismaClient | undefined;
-}
+// Create a type-safe global store
+const globalForPrisma = global as { prisma?: PrismaClient }
 
 async function initializeDatabase() {
   try {
@@ -59,10 +58,10 @@ async function getPrismaClient() {
   }
 
   // In development, reuse the client
-  if (!global.prisma) {
-    global.prisma = await createPrismaClient();
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = await createPrismaClient();
   }
-  return global.prisma;
+  return globalForPrisma.prisma;
 }
 
 // Helper to safely execute database operations
