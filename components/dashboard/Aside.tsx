@@ -11,15 +11,14 @@ export default function Aside() {
   const isAdmin = user?.email === 'projectapplied02@gmail.com'
 
   const navItems = [
-    { href: '/', label: 'Home', icon: Icons.home },
-    { href: '/all-equipments', label: 'All Equipments', icon: Icons.list },
-    { href: '/request-form', label: 'Request Form', icon: Icons.fileText },
-    { href: '/equipment-return', label: 'Equipment Return', icon: Icons.package },
     ...(isAdmin ? [
       { href: '/dashboard', label: 'Dashboard', icon: Icons.dashboard },
       { href: '/dashboard/equipment-types', label: 'Manage Equipment', icon: Icons.settings },
       { href: '/analytics', label: 'Analytics', icon: Icons.barChart },
-    ] : [])
+    ] : []),
+    { href: '/all-equipments', label: 'All Equipments', icon: Icons.list },
+    { href: '/request-form', label: 'Request Form', icon: Icons.fileText },
+    { href: '/equipment-return', label: 'Equipment Return', icon: Icons.package },
   ];
 
   if (!isAuthenticated) {

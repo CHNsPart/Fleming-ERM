@@ -13,13 +13,14 @@ import { Icons } from '@/components/ui/icons'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from '@/hooks/use-toast'
 import { useKindeAuth } from '@kinde-oss/kinde-auth-nextjs'
+import { ImageUpload } from '@/components/dashboard/ImageUpload'
 
 const formSchema = z.object({
   id: z.string().optional(),
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   totalQuantity: z.number().min(0, { message: "Total quantity must be 0 or greater." }),
   availableQuantity: z.number().min(0, { message: "Available quantity must be 0 or greater." }),
-  imageUrl: z.string().url({ message: "Please enter a valid image URL." }).optional().or(z.literal('')),
+  imageUrl: z.string().optional(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -76,8 +77,16 @@ export default function AdminEquipmentTypesPage() {
       })
       if (!response.ok) throw new Error('Failed to save equipment type')
       fetchEquipmentTypes()
-      reset()
+      
+      // Clear the form and image
+      reset({
+        name: '',
+        totalQuantity: 0,
+        availableQuantity: 0,
+        imageUrl: '',
+      })
       setEditingId(null)
+      
       toast({
         title: "Success",
         description: `Equipment type ${editingId ? 'updated' : 'added'} successfully.`,
@@ -92,6 +101,16 @@ export default function AdminEquipmentTypesPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleCancel = () => {
+    setEditingId(null)
+    reset({
+      name: '',
+      totalQuantity: 0,
+      availableQuantity: 0,
+      imageUrl: '',
+    })
   }
 
   const handleEdit = (equipment: EquipmentType) => {
@@ -148,39 +167,66 @@ export default function AdminEquipmentTypesPage() {
             <CardTitle className="text-xl">{editingId ? 'Edit' : 'Add'} Equipment Type</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Input {...register('name')} placeholder="Equipment Name" className="w-full" />
-                  {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              <div className="grid grid-cols-1 gap-6">
+                {/* Image Upload Section */}
+                <div className="col-span-1">
+                  <ImageUpload
+                    currentImageUrl={watch('imageUrl')}
+                    onImageChange={(url) => setValue('imageUrl', url)}
+                  />
                 </div>
-                <div>
-                  <Input {...register('totalQuantity', { valueAsNumber: true })} type="number" placeholder="Total Quantity" className="w-full" />
-                  {errors.totalQuantity && <p className="text-red-500 text-sm mt-1">{errors.totalQuantity.message}</p>}
+
+                {/* Other Form Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Input 
+                      {...register('name')} 
+                      placeholder="Equipment Name" 
+                      className="w-full" 
+                    />
+                    {errors.name && (
+                      <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Input 
+                      {...register('totalQuantity', { valueAsNumber: true })} 
+                      type="number" 
+                      placeholder="Total Quantity" 
+                      className="w-full" 
+                    />
+                    {errors.totalQuantity && (
+                      <p className="text-red-500 text-sm mt-1">{errors.totalQuantity.message}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Input 
+                      {...register('availableQuantity', { valueAsNumber: true })} 
+                      type="number" 
+                      placeholder="Available Quantity" 
+                      className="w-full" 
+                    />
+                    {errors.availableQuantity && (
+                      <p className="text-red-500 text-sm mt-1">{errors.availableQuantity.message}</p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <Input {...register('availableQuantity', { valueAsNumber: true })} type="number" placeholder="Available Quantity" className="w-full" />
-                  {errors.availableQuantity && <p className="text-red-500 text-sm mt-1">{errors.availableQuantity.message}</p>}
-                </div>
-                <div>
-                  <Input {...register('imageUrl')} placeholder="Image URL" className="w-full" />
-                  {errors.imageUrl && <p className="text-red-500 text-sm mt-1">{errors.imageUrl.message}</p>}
-                </div>
-              </div>
-              {watch('imageUrl') && (
-                <div className="mt-4">
-                  <Image src={watch('imageUrl') ?? ''} alt="Equipment preview" width={100} height={100} className="rounded-md shadow-sm" />
-                </div>
-              )}
-              <div className="flex justify-end space-x-2 mt-6">
-                {editingId && (
-                  <Button type="button" variant="outline" onClick={() => { setEditingId(null); reset(); }}>
-                    Cancel
+
+                <div className="flex justify-end space-x-2">
+                  {editingId && (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={handleCancel}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? 'Saving...' : (editingId ? 'Update Equipment' : 'Add Equipment')}
                   </Button>
-                )}
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : (editingId ? 'Update Equipment' : 'Add Equipment')}
-                </Button>
+                </div>
               </div>
             </form>
           </CardContent>

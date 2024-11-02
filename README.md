@@ -112,5 +112,4 @@ If you have any questions or feedback, please contact the project maintainers at
 - [Prisma](https://www.prisma.io/)
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Kinde Auth](https://kinde.com/)
-- [Shadcn UI](https://ui.shadcn.com/)# Fleming-ERM
-# Fleming-ERM
+- [Shadcn UI](https://ui.shadcn.com/)
