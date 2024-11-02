@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { initDatabase } from '../../_init';
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   const { isAuthenticated } = getKindeServerSession();
@@ -12,6 +13,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   const id = params.id;
 
   try {
+    await initDatabase();
     const requestData = await prisma.request.findUnique({
       where: { id },
       include: {

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   const filePath = path.join(process.cwd(), 'public/uploads', filename);
 
   try {
-    await writeFile(filePath, buffer);
+    await writeFile(filePath, new Uint8Array(buffer));
     return NextResponse.json({ fileUrl: `/uploads/${filename}` });
   } catch (error) {
     console.error('Error saving file:', error);
