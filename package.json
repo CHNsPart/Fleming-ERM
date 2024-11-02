@@ -6,7 +6,8 @@
     "dev": "prisma generate && prisma migrate deploy && next dev",
     "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",

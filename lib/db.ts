@@ -1,60 +1,81 @@
-// lib/db.ts
-
 import { PrismaClient } from '@prisma/client'
 import fs from 'fs'
 import path from 'path'
 
-const globalForPrisma = globalThis as { prisma?: PrismaClient }
-
-// Use different paths for production and development
+// Define the path for the database based on environment
 const DB_PATH = process.env.NODE_ENV === 'production' 
-  ? path.join(process.cwd(), 'prisma/prod.db')
+  ? '/tmp/prod.db'
   : path.join(process.cwd(), 'prisma/dev.db');
 
-// Ensure database exists and is accessible
-const ensureDatabase = () => {
+declare global {
+  var prisma: PrismaClient | undefined;
+}
+
+async function initializeDatabase() {
   try {
-    const dbDir = path.dirname(DB_PATH);
-    
-    // Ensure the directory exists
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true });
+    // Create /tmp directory in production if it doesn't exist
+    if (process.env.NODE_ENV === 'production' && !fs.existsSync('/tmp')) {
+      fs.mkdirSync('/tmp', { recursive: true });
     }
 
-    // If database doesn't exist, create it
-    if (!fs.existsSync(DB_PATH)) {
-      // In production, copy from the template if it exists
-      const templatePath = path.join(process.cwd(), 'prisma/template.db');
-      if (fs.existsSync(templatePath)) {
-        fs.copyFileSync(templatePath, DB_PATH);
+    const sourceDbPath = path.join(process.cwd(), 'prisma/prod.db');
+    
+    // In production, copy the database to /tmp if it doesn't exist
+    if (process.env.NODE_ENV === 'production' && !fs.existsSync(DB_PATH)) {
+      if (fs.existsSync(sourceDbPath)) {
+        fs.copyFileSync(sourceDbPath, DB_PATH);
+        // Set permissive permissions
+        fs.chmodSync(DB_PATH, 0o666);
       } else {
-        // Create empty file if template doesn't exist
+        // Create an empty database if the source doesn't exist
         fs.writeFileSync(DB_PATH, '');
+        fs.chmodSync(DB_PATH, 0o666);
       }
-      fs.chmodSync(DB_PATH, 0o666);
     }
   } catch (error) {
     console.error('Database initialization error:', error);
-    throw new Error(`Failed to initialize database at ${DB_PATH}`);
+    throw new Error('Failed to initialize database');
   }
 }
 
-const prismaClientSingleton = () => {
-  ensureDatabase();
+async function createPrismaClient() {
+  await initializeDatabase();
+  
   return new PrismaClient({
     datasources: {
       db: {
         url: `file:${DB_PATH}`
       }
     },
-    log: ['error', 'warn']
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error']
   });
 }
 
-const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
+// Singleton pattern for PrismaClient
+async function getPrismaClient() {
+  if (process.env.NODE_ENV === 'production') {
+    // In production, create a new client for each request
+    return await createPrismaClient();
+  }
 
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
+  // In development, reuse the client
+  if (!global.prisma) {
+    global.prisma = await createPrismaClient();
+  }
+  return global.prisma;
 }
 
-export default prisma;
+// Helper to safely execute database operations
+async function withPrisma<T>(operation: (prisma: PrismaClient) => Promise<T>): Promise<T> {
+  const prisma = await getPrismaClient();
+  try {
+    return await operation(prisma);
+  } finally {
+    // Clean up in production
+    if (process.env.NODE_ENV === 'production') {
+      await prisma.$disconnect();
+    }
+  }
+}
+
+export { withPrisma, getPrismaClient as default };

@@ -4,5 +4,14 @@
       "memory": 1024,
       "maxDuration": 10
     }
-  }
+  },
+  "build": {
+    "env": {
+      "PRISMA_CLI_BINARY_TARGETS": "native,debian-openssl-1.1.x"
+    }
+  },
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "outputDirectory": ".next",
+  "regions": ["iad1"]
 }
