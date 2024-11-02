@@ -1,20 +1,11 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
   "functions": {
     "app/api/**/*": {
       "memory": 1024,
       "maxDuration": 10
     }
   },
-  "build": {
-    "env": {
-      "PRISMA_CLI_BINARY_TARGETS": "native,debian-openssl-1.1.x"
-    }
+  "env": {
+    "PRISMA_CLI_BINARY_TARGETS": "native,debian-openssl-1.1.x"
   }
 }
