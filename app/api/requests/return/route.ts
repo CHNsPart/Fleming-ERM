@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { initDatabase } from '../../_init';
 
 export async function POST(request: NextRequest) {
   const { isAuthenticated } = getKindeServerSession();
@@ -10,6 +11,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await initDatabase();
     const body = await request.json();
     const { equipment } = body;
 

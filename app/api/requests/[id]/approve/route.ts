@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { initDatabase } from '@/app/api/_init';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const { isAuthenticated, getUser } = getKindeServerSession();
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const id = params.id;
 
   try {
-    // Start a transaction
+    await initDatabase();
     const result = await prisma.$transaction(async (prisma) => {
       // Fetch the request
       const equipmentRequest = await prisma.request.findUnique({

@@ -33,7 +33,8 @@ async function isApprover() {
 
 export async function GET() {
   try {
-    await ensureDatabaseExists();
+    await initDatabase();
+    
     const equipmentTypes = await prisma.equipment.findMany({
       select: { 
         id: true, 
@@ -43,6 +44,7 @@ export async function GET() {
         imageUrl: true 
       },
     });
+    console.log('Fetched equipment types:', equipmentTypes);
     return NextResponse.json(equipmentTypes);
   } catch (error) {
     console.error('Error fetching equipment types:', error);

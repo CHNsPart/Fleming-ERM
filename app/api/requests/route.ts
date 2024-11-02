@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { initDatabase } from '../_init';
 
 export async function GET(request: NextRequest) {
   const { isAuthenticated, getUser } = getKindeServerSession();
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    await initDatabase();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
 
@@ -53,6 +55,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await initDatabase();
     const body = await request.json();
     console.log('Received request body:', body);
 

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { initDatabase } from '../../_init';
 
 export async function GET() {
   const { isAuthenticated, getUser } = getKindeServerSession();
@@ -12,6 +13,7 @@ export async function GET() {
   const user = await getUser();
 
   try {
+    await initDatabase();
     const activeRequests = await prisma.request.findMany({
       where: {
         userId: user?.id,
