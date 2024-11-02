@@ -4,10 +4,5 @@
       "memory": 1024,
       "maxDuration": 10
     }
-  },
-  "build": {
-    "env": {
-      "PRISMA_CLI_BINARY_TARGETS": "native,debian-openssl-3.0.x,linux-musl,linux-musl-openssl-3.0.x"
-    }
   }
 }
