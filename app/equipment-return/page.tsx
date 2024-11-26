@@ -83,25 +83,6 @@ export default function EquipmentReturnPage() {
     }
   }
 
-  const fetchActiveRequests = async () => {
-    try {
-      const response = await fetch('/api/requests/active')
-      if (!response.ok) throw new Error('Failed to fetch active requests')
-      const data = await response.json()
-      // Ensure returnedQuantity is a number and include equipment data
-      const processedData = data.map((request: Request) => ({
-        ...request,
-        returnedQuantity: request.returnedQuantity || 0,
-      }))
-      setActiveRequests(processedData)
-    } catch (error) {
-      console.error('Error fetching active requests:', error)
-      alert('Failed to fetch active requests. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const handleRequestSelect = async (requestId: string) => {
     setSelectedRequest(requestId)
     try {
