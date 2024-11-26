@@ -3,20 +3,29 @@ import prisma from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import { initDatabase } from '../../_init';
 
-export async function GET() {
+export async function GET(request: Request) {
   const { isAuthenticated, getUser } = getKindeServerSession();
   
   if (!(await isAuthenticated())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const user = await getUser();
+  const { searchParams } = new URL(request.url);
+  const userId = searchParams.get('userId');
+
+  // If no userId provided and user is not admin, use authenticated user's ID
+  const currentUser = await getUser();
+  const queryUserId = userId || currentUser?.id;
+
+  if (!queryUserId) {
+    return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+  }
 
   try {
     await initDatabase();
     const activeRequests = await prisma.request.findMany({
       where: {
-        userId: user?.id,
+        userId: queryUserId,
         status: {
           in: ['APPROVED', 'PARTIALLY_RETURNED']
         }

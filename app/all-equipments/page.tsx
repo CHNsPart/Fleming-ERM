@@ -22,6 +22,7 @@ export default function AllEquipmentsPage() {
   const [equipments, setEquipments] = useState<Equipment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+  const isAdmin = user?.email === 'projectapplied02@gmail.com'
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -85,31 +86,35 @@ export default function AllEquipmentsPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg font-bold truncate">{item.name}</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Total</span>
-                    <span className="font-bold text-black">{item.totalQuantity}</span>
+              {isAdmin && (
+                <CardContent>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total</span>
+                      <span className="font-bold text-black">{item.totalQuantity}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Available</span>
+                      <span className="font-bold text-green-500">{item.availableQuantity}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">In Use</span>
+                      <span className="font-bold text-blue-500">{item.totalQuantity - item.availableQuantity}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Available</span>
-                    <span className="font-bold text-green-500">{item.availableQuantity}</span>
+                  <div className="mt-4">
+                    <div className="bg-gray-200 h-2 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-blue-500 rounded-full"
+                        style={{ width: `${(item.availableQuantity / item.totalQuantity) * 100}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">In Use</span>
-                    <span className="font-bold text-blue-500">{item.totalQuantity - item.availableQuantity}</span>
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <div className="bg-gray-200 h-2 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-500 rounded-full"
-                      style={{ width: `${(item.availableQuantity / item.totalQuantity) * 100}%` }}
-                    ></div>
-                  </div>
-                </div>
+                </CardContent>
+              )}
+              <CardContent className={isAdmin ? "pt-0" : ""}>
                 <Button 
-                  className="w-full mt-4"
+                  className="w-full"
                   onClick={() => handleRequestEquipment(item.id)}
                   disabled={item.availableQuantity === 0}
                 >

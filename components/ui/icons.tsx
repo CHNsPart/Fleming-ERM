@@ -6,12 +6,12 @@ import {
   CheckSquare,
   Package,
   Home,
-  LayoutDashboard,
-  FileText,
+  Boxes,
+  FileBox,
   Settings,
   Edit,
   Trash,
-  List,
+  ArchiveRestore,
   BarChart3
 } from 'lucide-react'
 
@@ -22,12 +22,12 @@ export const Icons = {
   checkSquare: CheckSquare,
   package: Package,
   home: Home,
-  dashboard: LayoutDashboard,
-  fileText: FileText,
+  dashboard: Boxes,
+  fileBox: FileBox,
   settings: Settings,
   edit: Edit,
   trash: Trash,
-  list: List,
+  archive: ArchiveRestore,
   barChart: BarChart3,
   google: (props: LucideProps) => (
     <svg {...props} viewBox="0 0 24 24">

@@ -15,10 +15,10 @@ export default function Aside() {
       { href: '/dashboard', label: 'Dashboard', icon: Icons.dashboard },
       { href: '/dashboard/equipment-types', label: 'Manage Equipment', icon: Icons.settings },
       { href: '/analytics', label: 'Analytics', icon: Icons.barChart },
+      { href: '/equipment-return', label: 'Equipment Return', icon: Icons.archive }
     ] : []),
-    { href: '/all-equipments', label: 'All Equipments', icon: Icons.list },
-    { href: '/request-form', label: 'Request Form', icon: Icons.fileText },
-    { href: '/equipment-return', label: 'Equipment Return', icon: Icons.package },
+    { href: '/all-equipments', label: 'All Equipments', icon: Icons.package },
+    { href: '/request-form', label: 'Request Form', icon: Icons.fileBox },
   ];
 
   if (!isAuthenticated) {

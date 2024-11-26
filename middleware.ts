@@ -16,8 +16,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check for approver role (email-based) for other routes
+  // Check for admin routes and equipment return
   if (request.nextUrl.pathname.startsWith('/dashboard') || 
+      request.nextUrl.pathname.startsWith('/equipment-return') ||
       (request.nextUrl.pathname.startsWith('/api/equipment-types') && request.method !== 'GET')) {
     if (user?.email !== 'projectapplied02@gmail.com') {
       return NextResponse.redirect(new URL('/unauthorized', request.url));
@@ -28,5 +29,12 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/api/equipment-types/:path*', '/request-form', '/equipment-return'],
+  matcher: [
+    '/dashboard/:path*', 
+    '/api/equipment-types/:path*',
+    '/api/users/active',
+    '/request-form', 
+    '/equipment-return',
+    '/analytics'
+  ],
 }

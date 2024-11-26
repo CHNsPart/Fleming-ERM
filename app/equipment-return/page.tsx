@@ -10,6 +10,12 @@ import { Input } from "@/components/ui/input"
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
+type User = {
+  id: string;
+  name: string;
+  email: string;
+}
+
 type Request = {
   id: string;
   equipmentType: string;
@@ -24,6 +30,7 @@ type Request = {
     imageUrl?: string;
   };
 }
+
 type Equipment = {
   id: string;
   equipmentId: string;
@@ -34,17 +41,47 @@ type Equipment = {
 }
 
 export default function EquipmentReturnPage() {
-  const { isAuthenticated, user } = useKindeAuth()
+  const { isAuthenticated } = useKindeAuth()
   const [isLoading, setIsLoading] = useState(true)
+  const [users, setUsers] = useState<User[]>([])
+  const [selectedUser, setSelectedUser] = useState<string | null>(null)
   const [activeRequests, setActiveRequests] = useState<Request[]>([])
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null)
   const [equipment, setEquipment] = useState<Equipment[]>([])
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchActiveRequests()
+    if (isAuthenticated) {
+      fetchUsers()
     }
-  }, [isAuthenticated, user])
+  }, [isAuthenticated])
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/users/active')
+      if (!response.ok) throw new Error('Failed to fetch users')
+      const data = await response.json()
+      setUsers(data)
+    } catch (error) {
+      console.error('Error fetching users:', error)
+      alert('Failed to fetch users. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const fetchUserRequests = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/requests/active?userId=${userId}`)
+      if (!response.ok) throw new Error('Failed to fetch user requests')
+      const data = await response.json()
+      setActiveRequests(data)
+      setSelectedRequest(null)
+      setEquipment([])
+    } catch (error) {
+      console.error('Error fetching user requests:', error)
+      alert('Failed to fetch user requests. Please try again.')
+    }
+  }
 
   const fetchActiveRequests = async () => {
     try {
@@ -107,14 +144,21 @@ export default function EquipmentReturnPage() {
           }))
         }),
       })
+      
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(errorData.error || 'Failed to confirm return')
       }
-      alert('Equipment return confirmed!')
+      
+      // Reset all states after successful return
       setSelectedRequest(null)
       setEquipment([])
-      fetchActiveRequests()
+      // Refresh the requests for the selected user
+      if (selectedUser) {
+        await fetchUserRequests(selectedUser)
+      }
+      
+      alert('Equipment return confirmed successfully!')
     } catch (error) {
       console.error('Error confirming return:', error)
       alert(error instanceof Error ? error.message : 'Failed to confirm return. Please try again.')
@@ -130,63 +174,99 @@ export default function EquipmentReturnPage() {
       <Aside />
       <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Equipment Return</h1>
-        
+
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Select a Request to Return</CardTitle>
-            <CardDescription>Choose from your active equipment requests</CardDescription>
+            <CardTitle>Select User</CardTitle>
+            <CardDescription>Choose a user to process equipment return</CardDescription>
           </CardHeader>
           <CardContent>
-            <Select onValueChange={handleRequestSelect}>
-              <SelectTrigger className="w-full h-fit">
-                <SelectValue placeholder="Select a request" />
+            <Select onValueChange={(value: string) => {
+              setSelectedUser(value)
+              fetchUserRequests(value)
+            }}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select a user" />
               </SelectTrigger>
               <SelectContent>
-                {activeRequests.map((request) => (
-                  <SelectItem key={request.id} value={request.id} className="p-0">
-                  <div className="flex items-center text-left space-x-3 p-2">
-                    <div className="flex-shrink-0 h-16 w-16 relative">
-                      <Image
-                        src={request.equipment.imageUrl || '/placeholder-image.jpg'}
-                        alt={request.equipmentType}
-                        width={64}
-                        height={64}
-                        className="rounded-md object-cover"
-                      />
+                {users.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{user.name}</span>
+                      <span className="text-sm text-gray-500">{user.email}</span>
                     </div>
-                    <div className="flex-grow">
-                      <h3 className="text-sm font-semibold text-gray-900">{request.equipmentType}</h3>
-                      <p className="text-xs text-gray-500">
-                        Total: <span className="font-medium text-gray-700">{request.quantity}</span>
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Picked up: <span className="font-medium text-gray-700">{new Date(request.pickupDate).toLocaleDateString()}</span>
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Return: <span className="font-medium text-gray-700">{request.returnDate ? new Date(request.returnDate).toLocaleDateString() : 'Not returned yet'}</span>
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Status: <span className={cn(
-                          "font-medium",
-                          request.status === 'APPROVED' ? "text-green-600" : 
-                          request.status === 'PARTIALLY_RETURNED' ? "text-orange-600" : 
-                          "text-gray-700"
-                        )}>{request.status}</span>
-                      </p>
-                    </div>
-                  </div>
-                </SelectItem>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </CardContent>
         </Card>
 
+        {selectedUser && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Select a Request to Return</CardTitle>
+              <CardDescription>Choose from active equipment requests</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select onValueChange={handleRequestSelect}>
+                <SelectTrigger className="w-full h-fit">
+                  <SelectValue placeholder="Select a request" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeRequests.map((request) => (
+                    <SelectItem key={request.id} value={request.id} className="p-0">
+                      <div className="flex items-center text-left space-x-3 p-2">
+                        <div className="flex-shrink-0 h-16 w-16 relative">
+                          <Image
+                            src={request.equipment.imageUrl || '/placeholder-image.jpg'}
+                            alt={request.equipmentType}
+                            width={64}
+                            height={64}
+                            className="rounded-md object-cover"
+                          />
+                        </div>
+                        <div className="flex-grow">
+                          <h3 className="text-sm font-semibold text-gray-900">
+                            {request.equipmentType}
+                          </h3>
+                          <p className="text-xs text-gray-500">
+                            Total: <span className="font-medium text-gray-700">
+                              {request.quantity}
+                            </span>
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Picked up: <span className="font-medium text-gray-700">
+                              {new Date(request.pickupDate).toLocaleDateString()}
+                            </span>
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Status: <span className={cn(
+                              "font-medium",
+                              request.status === 'APPROVED' ? "text-green-600" : 
+                              request.status === 'PARTIALLY_RETURNED' ? "text-orange-600" : 
+                              "text-gray-700"
+                            )}>{request.status}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+        )}
+
         {selectedRequest && (
           <Card className="bg-white shadow-lg rounded-lg overflow-hidden">
             <CardHeader className="bg-gray-50 border-b border-gray-200">
-              <CardTitle className="text-xl font-semibold text-gray-800">Return Equipment</CardTitle>
-              <CardDescription className="text-sm text-gray-500">Adjust the quantities you are returning</CardDescription>
+              <CardTitle className="text-xl font-semibold text-gray-800">
+                Return Equipment
+              </CardTitle>
+              <CardDescription className="text-sm text-gray-500">
+                Adjust the quantities you are returning
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <ul className="space-y-6">
@@ -196,7 +276,7 @@ export default function EquipmentReturnPage() {
                       <div>
                         <h3 className="font-medium text-gray-800">{item.name}</h3>
                         <p className="text-sm text-gray-500">
-                          Total: {item.quantity}, Available: {item.remaining}
+                          Total: {item.quantity}, Available to Return: {item.remaining}
                         </p>
                       </div>
                     </div>
@@ -209,7 +289,9 @@ export default function EquipmentReturnPage() {
                         onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value))}
                         className="w-20 text-center"
                       />
-                      <span className="text-sm font-medium text-gray-600">/ {item.remaining}</span>
+                      <span className="text-sm font-medium text-gray-600">
+                        / {item.remaining}
+                      </span>
                     </div>
                   </li>
                 ))}
@@ -226,6 +308,7 @@ export default function EquipmentReturnPage() {
             </CardContent>
           </Card>
         )}
+
       </div>
     </div>
   )
