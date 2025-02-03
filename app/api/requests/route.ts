@@ -67,18 +67,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Find the equipment type (case-insensitive)
+    // Simple direct name comparison
     const equipment = await prisma.equipment.findFirst({
       where: {
-        name: body.equipmentType.toUpperCase()
+        name: body.equipmentType
       }
     });
 
+    console.log('Looking for equipment:', body.equipmentType);
+    console.log('Found equipment:', equipment);
+
     if (!equipment) {
-      return NextResponse.json({ error: 'Invalid equipment type' }, { status: 400 });
+      const allEquipment = await prisma.equipment.findMany();
+      console.log('Available equipment:', allEquipment);
+      
+      return NextResponse.json({ 
+        error: 'Invalid equipment type', 
+        requested: body.equipmentType,
+        available: allEquipment.map(e => e.name),
+      }, { status: 400 });
     }
 
-    // Create the new request without updating the available quantity
+    // Rest of your code for creating the request...
     const newRequest = await prisma.request.create({
       data: {
         user: {
