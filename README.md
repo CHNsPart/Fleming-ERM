@@ -2,114 +2,128 @@
 
 ## Overview
 
-The Equipment Request System is a web-based application designed to streamline the process of requesting, approving, and managing equipment loans within an educational institution. It provides an intuitive interface for users to submit equipment requests, and for administrators to manage inventory and approve or decline requests.
+The Equipment Request System is a web-based application that manages equipment lending in educational institutions. Built with modern web technologies, it features a clean interface for users to request equipment and an administrative dashboard for inventory management.
 
-## Features
+## Key Features
 
-- User authentication and authorization
-- Equipment request submission
-- Admin dashboard for managing equipment and requests
-- Inventory management
-- Equipment return tracking
-- Email notifications for request status updates
-- Multi-campus support
+- **User Authentication**: Secure login through Kinde Auth integration
+- **Equipment Management**: 
+  - View available equipment with real-time inventory tracking
+  - Image support for equipment items
+  - Quantity and availability tracking
+- **Request System**:
+  - Intuitive request form with validation
+  - Support for multiple campuses (Sutherland and Frost)
+  - Purpose specification and date selection
+  - Equipment return tracking
+- **Admin Dashboard**:
+  - Comprehensive request management (approve/decline)
+  - Equipment type management with image uploads
+  - Analytics dashboard with usage statistics
+  - Equipment inventory monitoring
+- **Real-time Status Updates**: Track request status from pending to return
 
-## Technologies Used
+## Tech Stack
 
-- Next.js (React framework)
+### Frontend
+- Next.js 14 with App Router
 - TypeScript
-- Prisma (ORM)
-- SQLite (Database)
-- Tailwind CSS
+- Tailwind CSS with custom theming
 - Shadcn UI components
-- Kinde Auth (Authentication)
-- Zod (Form validation)
-- React Hook Form
-- Framer Motion (Animations)
+- React Hook Form with Zod validation
+- Recharts for analytics visualization
+- Framer Motion for animations
+
+### Backend
+- Next.js API routes
+- Prisma ORM
+- SQLite database
+- Sharp for image processing
+- UUID for unique identifiers
+
+### Authentication
+- Kinde Auth with Next.js integration
+- Role-based access control
 
 ## Prerequisites
 
-Before you begin, ensure you have met the following requirements:
-
-- Node.js (v14 or later)
+- Node.js (version specified in package.json)
 - npm or yarn
 - Git
 
 ## Installation
 
 1. Clone the repository:
-   ```
-   git clone https://github.com/your-username/equipment-request-system.git
-   ```
-
-2. Navigate to the project directory:
-   ```
-   cd equipment-request-system
+   ```bash
+   git clone <repository-url>
    ```
 
-3. Install dependencies:
-   ```
+2. Install dependencies:
+   ```bash
    npm install
    ```
-   or if you're using yarn:
-   ```
-   yarn install
-   ```
 
-4. Set up environment variables:
-   Create a `.env` file in the root directory and add the following variables:
-   ```
-   DATABASE_URL="file:./dev.db"
+3. Set up environment variables:
+   Create a `.env` file with:
+   ```env
+   DATABASE_URL="file:./prisma/dev.db"
    KINDE_CLIENT_ID=your_kinde_client_id
    KINDE_CLIENT_SECRET=your_kinde_client_secret
    KINDE_ISSUER_URL=your_kinde_issuer_url
    NEXT_PUBLIC_APP_URL=http://localhost:3000
    ```
 
-5. Set up the database:
-   ```
+4. Initialize the database:
+   ```bash
    npx prisma migrate dev
+   npx prisma db seed
    ```
 
-6. Run the development server:
-   ```
+5. Start the development server:
+   ```bash
    npm run dev
    ```
-   or with yarn:
-   ```
-   yarn dev
-   ```
 
-7. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+## Project Structure
 
-## Usage
+- `/app` - Next.js 14 app router pages and API routes
+- `/components` - Reusable React components
+- `/lib` - Utility functions and database configuration
+- `/prisma` - Database schema and migrations
+- `/public` - Static assets and uploaded files
 
-- Users can log in and submit equipment requests through the request form.
-- Administrators can access the dashboard to manage equipment, view and process requests, and monitor inventory.
-- The system will send email notifications (when fully implemented) for various stages of the request process.
+## Development Notes
+
+### API Routes
+- Equipment management: `/api/equipment-types`
+- Request handling: `/api/requests`
+- Image uploads: `/api/upload`
+
+### Admin Access
+- Admin email: projectapplied02@gmail.com
+- Admin features are restricted to this account
+
+### Database
+- Uses SQLite for development
+- Automatic seeding with sample equipment data
+- Production database stored in `/tmp` for Vercel deployment
+
+## Deployment
+
+The project is configured for deployment on Vercel with:
+- Custom memory allocation (1024MB)
+- Maximum function duration of 10 seconds
+- Automatic database initialization
+- Image upload support
 
 ## Contributing
 
-Contributions to the Equipment Request System are welcome. Please follow these steps to contribute:
-
 1. Fork the repository
-2. Create a new branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
 5. Open a Pull Request
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
-
-## Contact
-
-If you have any questions or feedback, please contact the project maintainers at [maintainer@gmail.com](mailto:maintainer@gmail.com).
-
-## Acknowledgements
-
-- [Next.js](https://nextjs.org/)
-- [Prisma](https://www.prisma.io/)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [Kinde Auth](https://kinde.com/)
-- [Shadcn UI](https://ui.shadcn.com/)
+MIT License (see LICENSE file)
