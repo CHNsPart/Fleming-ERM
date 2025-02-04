@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { initDatabase } from '../_init';
 
 export async function GET(request: NextRequest) {
   const { isAuthenticated, getUser } = getKindeServerSession();
@@ -12,13 +11,11 @@ export async function GET(request: NextRequest) {
 
   const user = await getUser();
   
-  // Check if the user is an admin (you may want to implement a more robust role check)
   if (user?.email !== 'projectapplied02@gmail.com') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   try {
-    await initDatabase();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
 
@@ -55,11 +52,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await initDatabase();
     const body = await request.json();
     console.log('Received request body:', body);
 
-    // Ensure all required fields are present
+    // Validate required fields
     const requiredFields = ['equipmentType', 'quantity', 'purpose', 'pickupDate', 'returnDate', 'campus'];
     for (const field of requiredFields) {
       if (!(field in body)) {
@@ -67,28 +63,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Simple direct name comparison
+    // Find the equipment type (case-insensitive)
     const equipment = await prisma.equipment.findFirst({
       where: {
-        name: body.equipmentType
+        name: body.equipmentType.toUpperCase()
       }
     });
 
-    console.log('Looking for equipment:', body.equipmentType);
-    console.log('Found equipment:', equipment);
-
     if (!equipment) {
-      const allEquipment = await prisma.equipment.findMany();
-      console.log('Available equipment:', allEquipment);
-      
-      return NextResponse.json({ 
-        error: 'Invalid equipment type', 
-        requested: body.equipmentType,
-        available: allEquipment.map(e => e.name),
-      }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid equipment type' }, { status: 400 });
     }
 
-    // Rest of your code for creating the request...
+    // Create the new request
     const newRequest = await prisma.request.create({
       data: {
         user: {

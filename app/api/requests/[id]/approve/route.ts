@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { initDatabase } from '@/app/api/_init';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const { isAuthenticated, getUser } = getKindeServerSession();
@@ -12,7 +11,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
   const user = await getUser();
   
-  // Check if the user is an admin
   if (user?.email !== 'projectapplied02@gmail.com') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
@@ -20,10 +18,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   const id = params.id;
 
   try {
-    await initDatabase();
-    const result = await prisma.$transaction(async (prisma) => {
+    const result = await prisma.$transaction(async (tx) => {
       // Fetch the request
-      const equipmentRequest = await prisma.request.findUnique({
+      const equipmentRequest = await tx.request.findUnique({
         where: { id },
         include: {
           equipment: true,
@@ -41,13 +38,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         throw new Error('Request is not in a pending state');
       }
 
-      // Check if there's enough inventory
       if (equipmentRequest.equipment.availableQuantity < equipmentRequest.quantity) {
         throw new Error('Not enough inventory available');
       }
 
       // Update the equipment inventory
-      const updatedEquipment = await prisma.equipment.update({
+      const updatedEquipment = await tx.equipment.update({
         where: { id: equipmentRequest.equipment.id },
         data: {
           availableQuantity: {
@@ -57,7 +53,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       });
 
       // Update the request status
-      const updatedRequest = await prisma.request.update({
+      const updatedRequest = await tx.request.update({
         where: { id },
         data: { status: 'APPROVED' },
         include: {

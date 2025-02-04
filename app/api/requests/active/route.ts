@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { initDatabase } from '../../_init';
 
 export async function GET(request: Request) {
   const { isAuthenticated, getUser } = getKindeServerSession();
@@ -22,7 +21,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    await initDatabase();
     const activeRequests = await prisma.request.findMany({
       where: {
         userId: queryUserId,
@@ -44,7 +42,13 @@ export async function GET(request: Request) {
       }
     });
 
-    return NextResponse.json(activeRequests);
+    // Add remaining quantity calculation
+    const requestsWithRemaining = activeRequests.map(request => ({
+      ...request,
+      remainingQuantity: request.quantity - request.returnedQuantity
+    }));
+
+    return NextResponse.json(requestsWithRemaining);
   } catch (error) {
     console.error('Error fetching active requests:', error);
     return NextResponse.json({ 

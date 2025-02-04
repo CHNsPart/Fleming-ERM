@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { initDatabase } from '../../_init';
 
 export async function POST(request: NextRequest) {
   const { isAuthenticated } = getKindeServerSession();
@@ -11,50 +10,54 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await initDatabase();
     const body = await request.json();
     const { equipment } = body;
 
-    for (const item of equipment) {
-      if (item.returned > 0) {
-        // Fetch the current request
-        const currentRequest = await prisma.request.findUnique({
-          where: { id: item.id },
-          include: { equipment: true }
-        });
+    const result = await prisma.$transaction(async (tx) => {
+      for (const item of equipment) {
+        if (item.returned > 0) {
+          // Fetch the current request
+          const currentRequest = await tx.request.findUnique({
+            where: { id: item.id },
+            include: { equipment: true }
+          });
 
-        if (!currentRequest) {
-          throw new Error(`Request not found for ID: ${item.id}`);
+          if (!currentRequest) {
+            throw new Error(`Request not found for ID: ${item.id}`);
+          }
+
+          const newReturnedQuantity = currentRequest.returnedQuantity + item.returned;
+          
+          if (newReturnedQuantity > currentRequest.quantity) {
+            throw new Error(`Cannot return more than requested for request ID: ${item.id}`);
+          }
+
+          // Update the request status and returnedQuantity
+          await tx.request.update({
+            where: { id: item.id },
+            data: {
+              status: newReturnedQuantity === currentRequest.quantity ? 'RETURNED' : 'PARTIALLY_RETURNED',
+              returnedQuantity: newReturnedQuantity
+            },
+          });
+
+          // Update the equipment inventory
+          await tx.equipment.update({
+            where: { id: currentRequest.equipment.id },
+            data: {
+              availableQuantity: {
+                increment: item.returned
+              }
+            },
+          });
         }
-
-        const newReturnedQuantity = currentRequest.returnedQuantity + item.returned;
-        
-        if (newReturnedQuantity > currentRequest.quantity) {
-          throw new Error(`Cannot return more than requested for request ID: ${item.id}`);
-        }
-
-        // Update the request status and returnedQuantity
-        await prisma.request.update({
-          where: { id: item.id },
-          data: {
-            status: newReturnedQuantity === currentRequest.quantity ? 'RETURNED' : 'PARTIALLY_RETURNED',
-            returnedQuantity: newReturnedQuantity
-          },
-        });
-
-        // Update the equipment inventory
-        await prisma.equipment.update({
-          where: { id: currentRequest.equipment.id },
-          data: {
-            availableQuantity: {
-              increment: item.returned
-            }
-          },
-        });
       }
-    }
+    });
 
-    return NextResponse.json({ message: 'Equipment return processed successfully' });
+    return NextResponse.json({ 
+      message: 'Equipment return processed successfully',
+      result 
+    });
   } catch (error) {
     console.error('Error processing equipment return:', error);
     return NextResponse.json({ 

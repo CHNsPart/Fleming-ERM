@@ -1,64 +1,65 @@
 import { NextResponse } from 'next/server';
-import { withPrisma } from '@/lib/db';
+import { prisma } from '@/lib/prisma';
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
 export async function GET() {
+  const { isAuthenticated } = getKindeServerSession();
+  
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
-    let inventory = await withPrisma(async (prisma) => {
-      const data = await prisma.equipment.findMany();
-      console.log('Inventory query result:', data);
-      return data;
+    // Fetch all equipment with their active requests
+    const inventory = await prisma.equipment.findMany({
+      include: {
+        requests: {
+          where: {
+            status: {
+              in: ['APPROVED', 'PARTIALLY_RETURNED']
+            }
+          },
+          select: {
+            quantity: true,
+            returnedQuantity: true,
+            status: true,
+            pickupDate: true,
+            returnDate: true
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
     });
 
-    // If no data is found, seed the database
-    if (inventory.length === 0 && process.env.NODE_ENV === 'production') {
-      console.log('No inventory found, initializing seed data...');
-      
-      inventory = await withPrisma(async (prisma) => {
-        // Add initial equipment
-        const equipmentData = [
-          {
-            name: 'LONG SLEEVE T-SHIRT',
-            totalQuantity: 50,
-            availableQuantity: 50,
-            imageUrl: 'https://bkstr.scene7.com/is/image/Bkstr/939-R64LT-WA17253-Black?$HomePageRecs_ET$'
-          },
-          {
-            name: 'POLO SHIRT',
-            totalQuantity: 30,
-            availableQuantity: 30,
-            imageUrl: 'https://bkstr.scene7.com/is/image/Bkstr/939-MQK00075-WSP1-Black?$HomePageRecs_ET$&fmt=png-alpha'
-          },
-          {
-            name: 'GRAD HOODIE',
-            totalQuantity: 25,
-            availableQuantity: 25,
-            imageUrl: 'https://bkstr.scene7.com/is/image/Bkstr/939-4186KH-GRAD-Black?$GMCategory_ET$'
-          },
-          {
-            name: 'BEAN HAT',
-            totalQuantity: 40,
-            availableQuantity: 40,
-            imageUrl: 'https://bkstr.scene7.com/is/image/Bkstr/939-T-CS4003-WDMK-D-Black?$GMCategory_ET$'
-          }
-        ];
+    // Calculate additional statistics for each equipment
+    const inventoryWithStats = inventory.map(item => {
+      const activeRequests = item.requests;
+      const itemsInUse = activeRequests.reduce((total, req) => 
+        total + (req.quantity - req.returnedQuantity), 0);
 
-        // Use transaction to create records one by one
-        await prisma.$transaction(
-          equipmentData.map((data) =>
-            prisma.equipment.upsert({
-              where: { name: data.name },
-              update: data,
-              create: data,
-            })
-          )
-        );
-        
-        return await prisma.equipment.findMany();
-      });
-    }
+      return {
+        id: item.id,
+        name: item.name,
+        totalQuantity: item.totalQuantity,
+        availableQuantity: item.availableQuantity,
+        imageUrl: item.imageUrl,
+        stats: {
+          inUse: itemsInUse,
+          utilizationRate: ((itemsInUse / item.totalQuantity) * 100).toFixed(2) + '%',
+          activeRequestsCount: activeRequests.length,
+          nearingReturn: activeRequests.filter(req => {
+            const returnDate = new Date(req.returnDate);
+            const today = new Date();
+            const daysUntilReturn = Math.ceil((returnDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+            return daysUntilReturn <= 3 && daysUntilReturn > 0;
+          }).length
+        }
+      };
+    });
 
-    // Always return a NextResponse
-    return NextResponse.json(inventory, {
+    return NextResponse.json(inventoryWithStats, {
       status: 200,
       headers: {
         'Cache-Control': 'no-store, must-revalidate',
@@ -67,9 +68,12 @@ export async function GET() {
       }
     });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error fetching inventory:', error);
     return NextResponse.json(
-      { error: 'Request failed', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to fetch inventory', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      }, 
       { status: 500 }
     );
   }

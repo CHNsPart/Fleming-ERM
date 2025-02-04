@@ -1,19 +1,19 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@prisma/client';
+import { withAccelerate } from '@prisma/extension-accelerate'
 
 const prismaClientSingleton = () => {
-  return new PrismaClient()
+  return new PrismaClient({
+    log: ['query', 'error', 'warn'],
+  }).$extends(withAccelerate())
+};
+
+declare global {
+  /* eslint no-var: off */
+  var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
 }
 
-type GlobalWithPrisma = typeof globalThis & {
-  prisma: ReturnType<typeof prismaClientSingleton> | undefined
-}
+const prisma = globalThis.prisma ?? prismaClientSingleton();
 
-const globalForPrisma = globalThis as GlobalWithPrisma
+export { prisma };
 
-const prisma = globalForPrisma.prisma ?? prismaClientSingleton()
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma
-}
-
-export default prisma
+if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma;
