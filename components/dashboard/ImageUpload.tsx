@@ -1,3 +1,6 @@
+// components/dashboard/ImageUpload.tsx
+'use client'
+
 import { useState, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -6,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Icons } from '@/components/ui/icons'
 import Image from 'next/image'
-import { toast } from '@/hooks/use-toast'
 
 interface ImageUploadProps {
   currentImageUrl?: string;
@@ -16,45 +18,44 @@ interface ImageUploadProps {
 export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(currentImageUrl)
+  const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const validateImageUrl = (url: string): boolean => {
     if (!url) return false
-    if (url.startsWith('https://bkstr.scene7.com/')) return true
+    if (url.startsWith('https://bkstr.scene7.com/') || url.startsWith('/uploads/')) return true
     return false
   }
 
   const handleUrlChange = (url: string) => {
+    setError(null)
+    if (url === '') {
+      setPreviewUrl('')
+      onImageChange('')
+      return
+    }
+    
     if (validateImageUrl(url)) {
       setPreviewUrl(url)
       onImageChange(url)
-    } else if (url === '') {
-      setPreviewUrl('')
-      onImageChange('')
+    } else {
+      setError('Please use a URL from bkstr.scene7.com')
     }
   }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null)
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Validate file type
+    // Basic validation
     if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload an image file",
-        variant: "destructive",
-      })
+      setError('Please upload an image file')
       return
     }
 
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 5MB",
-        variant: "destructive",
-      })
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Image must be smaller than 2MB')
       return
     }
 
@@ -68,23 +69,17 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
         body: formData,
       })
 
-      if (!response.ok) throw new Error('Upload failed')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Upload failed')
+      }
 
       const data = await response.json()
       setPreviewUrl(data.fileUrl)
       onImageChange(data.fileUrl)
-
-      toast({
-        title: "Upload successful",
-        description: "Your image has been uploaded successfully",
-      })
     } catch (error) {
       console.error('Upload error:', error)
-      toast({
-        title: "Upload failed",
-        description: "Failed to upload image. Please try again.",
-        variant: "destructive",
-      })
+      setError(error instanceof Error ? error.message : 'Failed to upload image')
     } finally {
       setIsUploading(false)
     }
@@ -96,6 +91,7 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+    setError(null)
   }
 
   return (
@@ -109,18 +105,22 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
 
           <TabsContent value="upload">
             <div className="space-y-4">
-              <Label htmlFor="image-upload">Upload Image</Label>
-              <div className="flex items-center gap-4">
-                <Input
-                  id="image-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  ref={fileInputRef}
-                  disabled={isUploading}
-                  className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 h-fit"
-                />
-              </div>
+              <Label htmlFor="image-upload">Upload Image (Max: 2MB)</Label>
+              <Input
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                ref={fileInputRef}
+                disabled={isUploading}
+                className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 h-fit"
+              />
+              {isUploading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Icons.spinner className="h-4 w-4 animate-spin" />
+                  Uploading image...
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -132,10 +132,17 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
                 type="url"
                 onChange={(e) => handleUrlChange(e.target.value)}
                 placeholder="https://bkstr.scene7.com/..."
+                defaultValue={previewUrl?.startsWith('https://') ? previewUrl : ''}
               />
             </div>
           </TabsContent>
         </Tabs>
+
+        {error && (
+          <div className="mt-2 text-sm text-red-500">
+            {error}
+          </div>
+        )}
 
         {/* Preview Section */}
         {previewUrl && (
@@ -145,9 +152,9 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
                 <Image
                   src={previewUrl}
                   alt="Preview"
-                  layout="fill"
-                  objectFit="cover"
-                  className="transition-all duration-300"
+                  fill
+                  sizes="192px"
+                  className="object-cover transition-all duration-300"
                 />
               </div>
               <Button
@@ -160,13 +167,6 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
                 <span className="sr-only">Remove image</span>
               </Button>
             </div>
-          </div>
-        )}
-
-        {isUploading && (
-          <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <Icons.spinner className="h-4 w-4 animate-spin" />
-            Uploading image...
           </div>
         )}
       </CardContent>
