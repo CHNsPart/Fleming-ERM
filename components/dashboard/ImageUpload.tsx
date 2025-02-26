@@ -20,12 +20,11 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
   const [isUploading, setIsUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(currentImageUrl)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [activeTab, setActiveTab] = useState<string>("url") // Default to URL tab for production
 
   // Validate URLs from the allowed source
   const validateImageUrl = (url: string): boolean => {
     if (!url) return false
-    if (url.startsWith('https://bkstr.scene7.com/')) return true
+    if (url.startsWith('https://bkstr.scene7.com/') || url.startsWith('/api/images/')) return true
     return false
   }
 
@@ -74,7 +73,8 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
       })
 
       if (!response.ok) {
-        throw new Error('Upload failed')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Upload failed')
       }
 
       const data = await response.json()
@@ -89,11 +89,9 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
       console.error('Upload error:', error)
       toast({
         title: "Upload failed",
-        description: "Please use the URL option instead. Direct uploads are currently unavailable.",
+        description: "Please try again or use the URL option instead",
         variant: "destructive",
       })
-      // Auto-switch to URL tab on error
-      setActiveTab("url")
     } finally {
       setIsUploading(false)
     }
@@ -110,7 +108,7 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
   return (
     <Card>
       <CardContent className="p-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs defaultValue="url" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="url">Image URL</TabsTrigger>
             <TabsTrigger value="upload">Upload Image</TabsTrigger>
@@ -134,9 +132,6 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
                   Uploading image...
                 </div>
               )}
-              <p className="text-xs text-muted-foreground">
-                Note: If upload is unavailable, please use the URL option instead.
-              </p>
             </div>
           </TabsContent>
 

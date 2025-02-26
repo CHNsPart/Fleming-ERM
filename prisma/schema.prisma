@@ -40,3 +40,11 @@ model Equipment {
   imageUrl          String?
   requests          Request[]
 }
+
+model UploadedImage {
+  id        String   @id @default(cuid())
+  filename  String
+  data      Bytes    
+  mimeType  String
+  createdAt DateTime @default(now())
+}

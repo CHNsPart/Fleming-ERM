@@ -1,7 +1,6 @@
 // app/api/upload/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import path from 'path';
+import { prisma } from '@/lib/prisma';
 import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs';
@@ -27,29 +26,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
     }
 
-    // Create a unique filename
+    // Get binary data from file
     const buffer = Buffer.from(await file.arrayBuffer());
+    
+    // Create a unique filename
     const filename = `${uuidv4()}.${file.name.split('.').pop()}`;
     
-    try {
-      // Define upload directory path
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-      const filePath = path.join(uploadDir, filename);
-      
-      // Save the file
-      await writeFile(filePath, buffer);
-      
-      // Return the public URL
-      const fileUrl = `/uploads/${filename}`;
-      return NextResponse.json({ fileUrl });
-    } catch (fsError) {
-      console.error('File system error:', fsError);
-      // If file system operations fail, inform the client to use the URL option
-      return NextResponse.json({ 
-        error: "File system access unavailable", 
-        message: "Please use the URL option instead." 
-      }, { status: 500 });
-    }
+    // Store the image in the database
+    const uploadedImage = await prisma.uploadedImage.create({
+      data: {
+        filename: filename,
+        data: buffer,
+        mimeType: file.type
+      }
+    });
+    
+    // Return a URL that will access the image via our API
+    const fileUrl = `/api/images/${uploadedImage.id}`;
+    
+    return NextResponse.json({ fileUrl });
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json({ error: "Failed to process upload" }, { status: 500 });
