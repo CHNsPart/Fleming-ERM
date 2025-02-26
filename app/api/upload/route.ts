@@ -27,20 +27,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
     }
 
-    // Create unique filename
+    // Create a unique filename
     const buffer = Buffer.from(await file.arrayBuffer());
     const filename = `${uuidv4()}.${file.name.split('.').pop()}`;
     
-    // Define upload directory path
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    const filePath = path.join(uploadDir, filename);
-    
-    // Save the file
-    await writeFile(filePath, buffer);
-    
-    // Return the public URL
-    const fileUrl = `/uploads/${filename}`;
-    return NextResponse.json({ fileUrl });
+    try {
+      // Define upload directory path
+      const uploadDir = path.join(process.cwd(), 'public', 'uploads');
+      const filePath = path.join(uploadDir, filename);
+      
+      // Save the file
+      await writeFile(filePath, buffer);
+      
+      // Return the public URL
+      const fileUrl = `/uploads/${filename}`;
+      return NextResponse.json({ fileUrl });
+    } catch (fsError) {
+      console.error('File system error:', fsError);
+      // If file system operations fail, inform the client to use the URL option
+      return NextResponse.json({ 
+        error: "File system access unavailable", 
+        message: "Please use the URL option instead." 
+      }, { status: 500 });
+    }
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json({ error: "Failed to process upload" }, { status: 500 });

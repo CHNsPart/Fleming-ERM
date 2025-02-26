@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Icons } from '@/components/ui/icons'
 import Image from 'next/image'
+import { toast } from '@/hooks/use-toast'
 
 interface ImageUploadProps {
   currentImageUrl?: string;
@@ -18,44 +19,47 @@ interface ImageUploadProps {
 export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(currentImageUrl)
-  const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [activeTab, setActiveTab] = useState<string>("url") // Default to URL tab for production
 
+  // Validate URLs from the allowed source
   const validateImageUrl = (url: string): boolean => {
     if (!url) return false
-    if (url.startsWith('https://bkstr.scene7.com/') || url.startsWith('/uploads/')) return true
+    if (url.startsWith('https://bkstr.scene7.com/')) return true
     return false
   }
 
   const handleUrlChange = (url: string) => {
-    setError(null)
-    if (url === '') {
-      setPreviewUrl('')
-      onImageChange('')
-      return
-    }
-    
     if (validateImageUrl(url)) {
       setPreviewUrl(url)
       onImageChange(url)
-    } else {
-      setError('Please use a URL from bkstr.scene7.com')
+    } else if (url === '') {
+      setPreviewUrl('')
+      onImageChange('')
     }
   }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    setError(null)
     const file = event.target.files?.[0]
     if (!file) return
 
-    // Basic validation
+    // Validate file type
     if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file')
+      toast({
+        title: "Invalid file type",
+        description: "Please upload an image file",
+        variant: "destructive",
+      })
       return
     }
 
+    // Validate file size (2MB limit)
     if (file.size > 2 * 1024 * 1024) {
-      setError('Image must be smaller than 2MB')
+      toast({
+        title: "File too large",
+        description: "Please upload an image smaller than 2MB",
+        variant: "destructive",
+      })
       return
     }
 
@@ -70,16 +74,26 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Upload failed')
+        throw new Error('Upload failed')
       }
 
       const data = await response.json()
       setPreviewUrl(data.fileUrl)
       onImageChange(data.fileUrl)
+
+      toast({
+        title: "Upload successful",
+        description: "Your image has been uploaded successfully",
+      })
     } catch (error) {
       console.error('Upload error:', error)
-      setError(error instanceof Error ? error.message : 'Failed to upload image')
+      toast({
+        title: "Upload failed",
+        description: "Please use the URL option instead. Direct uploads are currently unavailable.",
+        variant: "destructive",
+      })
+      // Auto-switch to URL tab on error
+      setActiveTab("url")
     } finally {
       setIsUploading(false)
     }
@@ -91,16 +105,15 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
-    setError(null)
   }
 
   return (
     <Card>
       <CardContent className="p-6">
-        <Tabs defaultValue="upload" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-4">
-            <TabsTrigger value="upload">Upload Image</TabsTrigger>
             <TabsTrigger value="url">Image URL</TabsTrigger>
+            <TabsTrigger value="upload">Upload Image</TabsTrigger>
           </TabsList>
 
           <TabsContent value="upload">
@@ -121,6 +134,9 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
                   Uploading image...
                 </div>
               )}
+              <p className="text-xs text-muted-foreground">
+                Note: If upload is unavailable, please use the URL option instead.
+              </p>
             </div>
           </TabsContent>
 
@@ -137,12 +153,6 @@ export function ImageUpload({ currentImageUrl, onImageChange }: ImageUploadProps
             </div>
           </TabsContent>
         </Tabs>
-
-        {error && (
-          <div className="mt-2 text-sm text-red-500">
-            {error}
-          </div>
-        )}
 
         {/* Preview Section */}
         {previewUrl && (
