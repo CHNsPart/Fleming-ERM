@@ -23,6 +23,26 @@ The Equipment Request System is a web-based application that manages equipment l
   - Equipment inventory monitoring
 - **Real-time Status Updates**: Track request status from pending to return
 
+## Email Notifications
+
+The system sends email notifications for the following events:
+
+1. **New Equipment Request**
+   - User receives confirmation of their request
+   - Admin receives notification of the new request
+
+2. **Request Approval**
+   - User receives notification that their request was approved
+   - Admin receives confirmation of the approval action
+
+3. **Request Denial**
+   - User receives notification that their request was declined
+   - Admin receives confirmation of the denial action
+
+4. **Equipment Return**
+   - User receives confirmation of returned equipment
+   - Admin receives notification of the processed return
+
 ## Tech Stack
 
 ### Frontend
@@ -38,6 +58,7 @@ The Equipment Request System is a web-based application that manages equipment l
 - Next.js API routes
 - Prisma ORM
 - SQLite database
+- **Email Service**: Resend
 - Sharp for image processing
 - UUID for unique identifiers
 
@@ -108,6 +129,15 @@ The Equipment Request System is a web-based application that manages equipment l
 - Automatic seeding with sample equipment data
 - Production database stored in `/tmp` for Vercel deployment
 
+## Email Templates
+
+Email templates are defined in `lib/email-templates.ts` and include responsive HTML designs for all notification types. Templates include:
+
+- Request confirmation
+- Request approval
+- Request denial
+- Equipment return confirmation
+
 ## Deployment
 
 The project is configured for deployment on Vercel with:
@@ -126,4 +156,4 @@ The project is configured for deployment on Vercel with:
 
 ## License
 
-MIT License (see LICENSE file)
+[MIT](https://choosealicense.com/licenses/mit/)

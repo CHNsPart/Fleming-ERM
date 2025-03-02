@@ -1,17 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { sendEmail, getAdminEmails } from '@/lib/email';
+import * as EmailTemplates from '@/lib/email-templates';
 
 export async function POST(request: NextRequest) {
-  const { isAuthenticated } = getKindeServerSession();
+  const { isAuthenticated, getUser } = getKindeServerSession();
   
   if (!(await isAuthenticated())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const currentUser = await getUser();
+  if (currentUser?.email !== 'projectapplied02@gmail.com') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   try {
     const body = await request.json();
     const { equipment } = body;
+
+    const emailResults: any[] = [];
 
     const result = await prisma.$transaction(async (tx) => {
       for (const item of equipment) {
@@ -19,7 +28,12 @@ export async function POST(request: NextRequest) {
           // Fetch the current request
           const currentRequest = await tx.request.findUnique({
             where: { id: item.id },
-            include: { equipment: true }
+            include: { 
+              equipment: true,
+              user: {
+                select: { name: true, email: true }
+              }
+            }
           });
 
           if (!currentRequest) {
@@ -50,13 +64,53 @@ export async function POST(request: NextRequest) {
               }
             },
           });
+
+          // Store details for email
+          emailResults.push({
+            request: currentRequest,
+            returnedQuantity: item.returned,
+            newReturnedQuantity,
+            totalQuantity: currentRequest.quantity
+          });
         }
       }
     });
 
+    // Send emails for each return
+    const allEmailResults = await Promise.all(
+      emailResults.map(async (returnData) => {
+        const request = returnData.request;
+        
+        // Prepare data for email templates
+        const emailData = {
+          userName: request.user.name || 'User',
+          userEmail: request.user.email || '',
+          equipmentName: request.equipmentType,
+          quantityReturned: returnData.returnedQuantity,
+          totalQuantity: returnData.totalQuantity,
+          returnDate: new Date(),
+          requestId: request.id
+        };
+
+        // Send return confirmation emails
+        const userEmailResult = await sendEmail(
+          emailData.userEmail,
+          EmailTemplates.returnUserEmail(emailData)
+        );
+
+        const adminEmailResult = await sendEmail(
+          getAdminEmails(),
+          EmailTemplates.returnAdminEmail(emailData)
+        );
+
+        return { request: request.id, userEmailResult, adminEmailResult };
+      })
+    );
+
     return NextResponse.json({ 
       message: 'Equipment return processed successfully',
-      result 
+      result,
+      emailResults: allEmailResults
     });
   } catch (error) {
     console.error('Error processing equipment return:', error);

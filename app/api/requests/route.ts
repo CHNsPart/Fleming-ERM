@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { sendEmail, getAdminEmails } from '@/lib/email';
+import * as EmailTemplates from '@/lib/email-templates';
 
 export async function GET(request: NextRequest) {
   const { isAuthenticated, getUser } = getKindeServerSession();
@@ -101,7 +103,39 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    
+    // Send email notifications
+    const userName = kindeUser.given_name || kindeUser.family_name || 'User';
+    const userEmail = kindeUser.email || '';
+    
+    // Prepare email data
+    const emailData = {
+      userName,
+      userEmail,
+      equipmentName: equipment.name,
+      quantity: parseInt(body.quantity),
+      purpose: body.purpose,
+      pickupDate: body.pickupDate,
+      returnDate: body.returnDate,
+      campus: body.campus,
+      requestId: newRequest.id
+    };
+
+    // Send email to user
+    const userEmailResult = await sendEmail(
+      userEmail,
+      EmailTemplates.newRequestUserEmail(emailData)
+    );
+
+    // Send email to admin
+    const adminEmailResult = await sendEmail(
+      getAdminEmails(),
+      EmailTemplates.newRequestAdminEmail(emailData)
+    );
+
     console.log('Created new request:', newRequest);
+    console.log('Email results:', { user: userEmailResult, admin: adminEmailResult });
+
     return NextResponse.json(newRequest, { status: 201 });
   } catch (error) {
     console.error('Error creating request:', error);

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
+import { sendEmail, getAdminEmails } from '@/lib/email';
+import * as EmailTemplates from '@/lib/email-templates';
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   const { isAuthenticated, getUser } = getKindeServerSession();
@@ -63,11 +65,40 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         },
       });
 
-      return { updatedRequest, updatedEquipment };
+      return { updatedRequest, updatedEquipment, equipmentRequest };
     });
 
+    // Prepare email data
+    const emailData = {
+      userName: result.equipmentRequest.user.name || 'User',
+      userEmail: result.equipmentRequest.user.email || '',
+      equipmentName: result.equipmentRequest.equipmentType,
+      quantity: result.equipmentRequest.quantity,
+      purpose: result.equipmentRequest.purpose,
+      pickupDate: result.equipmentRequest.pickupDate,
+      returnDate: result.equipmentRequest.returnDate,
+      campus: result.equipmentRequest.campus,
+      requestId: result.equipmentRequest.id
+    };
+
+    // Send approval emails
+    const userEmailResult = await sendEmail(
+      emailData.userEmail,
+      EmailTemplates.approvalUserEmail(emailData)
+    );
+
+    const adminEmailResult = await sendEmail(
+      getAdminEmails(),
+      EmailTemplates.approvalAdminEmail(emailData)
+    );
+
     console.log('Approval result:', result);
-    return NextResponse.json(result);
+    console.log('Email results:', { user: userEmailResult, admin: adminEmailResult });
+    
+    return NextResponse.json({
+      ...result,
+      emailSent: userEmailResult.success && adminEmailResult.success
+    });
   } catch (error) {
     console.error('Error approving request:', error);
     return NextResponse.json({ 
