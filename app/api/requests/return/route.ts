@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { equipment } = body;
-
+    /* eslint-disable  @typescript-eslint/no-explicit-any */
     const emailResults: any[] = [];
 
     const result = await prisma.$transaction(async (tx) => {

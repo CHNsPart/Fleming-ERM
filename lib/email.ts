@@ -4,7 +4,7 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Email sender configuration
-const FROM_EMAIL = process.env.FROM_EMAIL || 'Equipment System <onboarding@resend.dev>';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Equipment System <noreply@fleminginventorysystem.online>';
 const ADMIN_EMAIL = 'projectapplied02@gmail.com';
 
 // Define email template types

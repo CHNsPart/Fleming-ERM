@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
-import { sendEmail, getAdminEmails, EmailResponse } from '@/lib/email';
+import { sendEmail, getAdminEmails } from '@/lib/email';
 import * as EmailTemplates from '@/lib/email-templates';
 
 export async function POST(request: NextRequest) {
