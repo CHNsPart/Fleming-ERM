@@ -168,7 +168,7 @@ export default function RequestFormContent() {
                       </div>
                       <div className="flex-grow">
                         <h3 className="text-sm font-medium text-gray-900">{type.name}</h3>
-                        <p className="text-xs text-gray-500 mt-1">Available: {type.availableQuantity}</p>
+                        {/* <p className="text-xs text-gray-500 mt-1">Available: {type.availableQuantity}</p> */}
                       </div>
                     </div>
                   </SelectItem>
